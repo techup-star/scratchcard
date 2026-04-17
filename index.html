@@ -8,7 +8,7 @@
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f3f4f6;
+            background-color: #ffdac1;
         }
         .scratch-container {
             position: relative;
@@ -41,37 +41,32 @@
         }
     </style>
 </head>
-<body class="flex flex-col items-center justify-center min-h-screen p-4">
+<body class="flex flex-col items-center justify-center min-h-screen p-4 bg-gradient-to-br from-[#ffdac1] via-[#ffb7b2] to-[#c7ceea]">
 
     <div class="text-center mb-8">
-        <h1 class="text-4xl font-bold text-blue-600 mb-2">גלה את התמונה!</h1>
-        <p class="text-gray-600 text-lg">השתמש בעכבר או באצבע כדי לגרד את הכרטיס</p>
+        <h1 class="text-4xl font-bold text-[#6b5b95] mb-2">גלה את התמונה!</h1>
+        <p class="text-[#6b5b95] text-lg font-medium">השתמש בעכבר או באצבע כדי לגרד את הכרטיס</p>
     </div>
 
     <!-- אזור הגירוד -->
-    <div class="scratch-container bg-white border-4 border-white">
-        <!-- התמונה המוסתרת: מקושרת לקובץ pic.png באותה תיקייה -->
+    <div class="scratch-container bg-white border-4 border-[#e2f0cb]">
+        <!-- התמונה המוסתרת -->
         <img src="./pic.png" alt="תמונה מוסתרת" id="hiddenImage" onerror="this.onerror=null; this.src='https://picsum.photos/400/300?random=1';">
         
         <!-- קנבס הגירוד -->
         <canvas id="scratchCanvas" width="400" height="300"></canvas>
 
-        <!-- שכבת הודעת הניצחון (מוסתרת בהתחלה) -->
-        <div id="successOverlay" class="absolute inset-0 bg-black/80 flex flex-col items-center justify-center text-white hidden z-10">
-            <h2 class="text-3xl font-bold mb-2 text-yellow-400">מעולה!</h2>
-            <p class="text-lg mb-4 text-center px-4">חשפת את התמונה. הקוד לחידה הבאה הוא:</p>
-            <div class="text-6xl font-black tracking-widest text-white bg-blue-600 px-6 py-3 rounded-xl shadow-lg border-2 border-blue-400">247</div>
+        <!-- שכבת הודעת הניצחון -->
+        <div id="successOverlay" class="absolute inset-0 bg-[#c7ceea]/95 flex flex-col items-center justify-center text-[#6b5b95] hidden z-10">
+            <h2 class="text-3xl font-bold mb-2 text-[#6b5b95] drop-shadow-sm">מעולה!</h2>
+            <p class="text-lg mb-4 text-center px-4 font-semibold">חשפת את התמונה. הקוד לחידה הבאה הוא:</p>
+            <div class="text-6xl font-black tracking-widest text-[#6b5b95] bg-[#e2f0cb] px-6 py-3 rounded-xl shadow-lg border-4 border-[#b5ead7]">247</div>
         </div>
     </div>
-
-    <button id="resetBtn" class="mt-8 px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105">
-        התחל מחדש
-    </button>
 
     <script>
         const canvas = document.getElementById('scratchCanvas');
         const ctx = canvas.getContext('2d');
-        const resetBtn = document.getElementById('resetBtn');
         const successOverlay = document.getElementById('successOverlay');
         
         let isDrawing = false;
@@ -85,25 +80,25 @@
             isRevealed = false;
             successOverlay.classList.add('hidden');
 
-            // הגדרת הרקע האפור (כמו כרטיס גירוד אמיתי)
+            // הגדרת הרקע (צבע טורקיז פסטל)
             ctx.globalCompositeOperation = 'source-over';
-            ctx.fillStyle = '#a0aec0'; // צבע אפור
+            ctx.fillStyle = '#b5ead7'; 
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
             // הוספת טקסט על משטח הגירוד
             ctx.font = 'bold 30px Assistant, Arial, sans-serif';
-            ctx.fillStyle = '#4a5568';
+            ctx.fillStyle = '#6b5b95';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             ctx.fillText('גרד כאן!', canvas.width / 2, canvas.height / 2);
 
-            // הגדרות למחק (הגירוד)
+            // הגדרות למחק
             ctx.lineJoin = 'round';
             ctx.lineCap = 'round';
-            ctx.lineWidth = 40; // עובי המחק
+            ctx.lineWidth = 40; 
         }
 
-        // חישוב מיקום העכבר/אצבע מדויק ביחס לקנבס שמותאם רספונסיבית
+        // חישוב מיקום העכבר/אצבע מדויק
         function getMousePos(evt) {
             const rect = canvas.getBoundingClientRect();
             const scaleX = canvas.width / rect.width;
@@ -132,7 +127,7 @@
             
             const pos = getMousePos(evt);
             
-            // הגדרת מצב של "מחיקה" כדי לחשוף את מה שמתחת (התמונה)
+            // הגדרת מצב של "מחיקה" כדי לחשוף את התמונה
             ctx.globalCompositeOperation = 'destination-out';
             
             ctx.lineTo(pos.x, pos.y);
@@ -147,7 +142,7 @@
             const pixels = imageData.data;
             let transparentPixels = 0;
             
-            // בדיקת הפיקסלים השקופים במערך המידע של הקנבס
+            // בדיקת הפיקסלים השקופים
             for (let i = 3; i < pixels.length; i += 4) {
                 if (pixels[i] < 128) {
                     transparentPixels++;
@@ -169,9 +164,9 @@
             // ניקוי הקנבס
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             
-            // הפעלת צליל (וידוא שההפעלה תעבוד גם בטלפונים)
+            // הפעלת צליל
             winSound.currentTime = 0;
-            winSound.play().catch(err => console.log("הפעלת השמע נחסמה על ידי הדפדפן", err));
+            winSound.play().catch(err => console.log("שגיאת צליל", err));
             
             // הצגת שכבת הניצחון
             successOverlay.classList.remove('hidden');
@@ -191,7 +186,7 @@
             checkReveal(); // בודק מצב כשהמשתמש מפסיק לגרד
         });
 
-        // אירועי מגע (לטלפונים וטאבלטים)
+        // אירועי מגע
         canvas.addEventListener('touchstart', (e) => {
             if (isRevealed) return;
             isDrawing = true;
@@ -204,9 +199,6 @@
             isDrawing = false;
             checkReveal(); // בודק מצב כשהמשתמש מרים את האצבע
         });
-
-        // כפתור התחל מחדש
-        resetBtn.addEventListener('click', initCanvas);
 
         // אתחול ראשוני
         initCanvas();
