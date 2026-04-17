@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>כרטיס גירוד</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f3f4f6;
+        }
+        .scratch-container {
+            position: relative;
+            width: 100%;
+            max-width: 400px;
+            aspect-ratio: 4/3;
+            margin: 0 auto;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            user-select: none;
+            touch-action: none; /* מונע גלילה בזמן גירוד במסכי מגע */
+        }
+        #hiddenImage {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            pointer-events: none;
+        }
+        #scratchCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body class="flex flex-col items-center justify-center min-h-screen p-4">
+
+    <div class="text-center mb-8">
+        <h1 class="text-4xl font-bold text-blue-600 mb-2">גלה את התמונה!</h1>
+        <p class="text-gray-600 text-lg">השתמש בעכבר או באצבע כדי לגרד את הכרטיס</p>
+    </div>
+
+    <!-- אזור הגירוד -->
+    <div class="scratch-container bg-white border-4 border-white">
+        <!-- התמונה המוסתרת: מקושרת לקובץ pic.png באותה תיקייה -->
+        <img src="./pic.png" alt="תמונה מוסתרת" id="hiddenImage" onerror="this.onerror=null; this.src='https://picsum.photos/400/300?random=1';">
+        
+        <!-- קנבס הגירוד -->
+        <canvas id="scratchCanvas" width="400" height="300"></canvas>
+
+        <!-- שכבת הודעת הניצחון (מוסתרת בהתחלה) -->
+        <div id="successOverlay" class="absolute inset-0 bg-black/80 flex flex-col items-center justify-center text-white hidden z-10">
+            <h2 class="text-3xl font-bold mb-2 text-yellow-400">מעולה!</h2>
+            <p class="text-lg mb-4 text-center px-4">חשפת את התמונה. הקוד לחידה הבאה הוא:</p>
+            <div class="text-6xl font-black tracking-widest text-white bg-blue-600 px-6 py-3 rounded-xl shadow-lg border-2 border-blue-400">247</div>
+        </div>
+    </div>
+
+    <button id="resetBtn" class="mt-8 px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105">
+        התחל מחדש
+    </button>
+
+    <script>
+        const canvas = document.getElementById('scratchCanvas');
+        const ctx = canvas.getContext('2d');
+        const resetBtn = document.getElementById('resetBtn');
+        const successOverlay = document.getElementById('successOverlay');
+        
+        let isDrawing = false;
+        let isRevealed = false;
+
+        // הגדרת קובץ צליל הניצחון 
+        const winSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2013/2013-preview.mp3');
+
+        // פונקציה לציור שכבת הכיסוי ההתחלתית
+        function initCanvas() {
+            isRevealed = false;
+            successOverlay.classList.add('hidden');
+
+            // הגדרת הרקע האפור (כמו כרטיס גירוד אמיתי)
+            ctx.globalCompositeOperation = 'source-over';
+            ctx.fillStyle = '#a0aec0'; // צבע אפור
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // הוספת טקסט על משטח הגירוד
+            ctx.font = 'bold 30px Assistant, Arial, sans-serif';
+            ctx.fillStyle = '#4a5568';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('גרד כאן!', canvas.width / 2, canvas.height / 2);
+
+            // הגדרות למחק (הגירוד)
+            ctx.lineJoin = 'round';
+            ctx.lineCap = 'round';
+            ctx.lineWidth = 40; // עובי המחק
+        }
+
+        // חישוב מיקום העכבר/אצבע מדויק ביחס לקנבס שמותאם רספונסיבית
+        function getMousePos(evt) {
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            
+            let clientX, clientY;
+            
+            if (evt.touches && evt.touches.length > 0) {
+                clientX = evt.touches[0].clientX;
+                clientY = evt.touches[0].clientY;
+            } else {
+                clientX = evt.clientX;
+                clientY = evt.clientY;
+            }
+
+            return {
+                x: (clientX - rect.left) * scaleX,
+                y: (clientY - rect.top) * scaleY
+            };
+        }
+
+        // פונקציית הגירוד
+        function scratch(evt) {
+            if (!isDrawing || isRevealed) return;
+            evt.preventDefault(); // מונע גלילה בסלולר
+            
+            const pos = getMousePos(evt);
+            
+            // הגדרת מצב של "מחיקה" כדי לחשוף את מה שמתחת (התמונה)
+            ctx.globalCompositeOperation = 'destination-out';
+            
+            ctx.lineTo(pos.x, pos.y);
+            ctx.stroke();
+        }
+
+        // פונקציה שבודקת כמה אחוזים מהכרטיס גורדו
+        function checkReveal() {
+            if (isRevealed) return;
+            
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const pixels = imageData.data;
+            let transparentPixels = 0;
+            
+            // בדיקת הפיקסלים השקופים במערך המידע של הקנבס
+            for (let i = 3; i < pixels.length; i += 4) {
+                if (pixels[i] < 128) {
+                    transparentPixels++;
+                }
+            }
+            
+            const totalPixels = pixels.length / 4;
+            const percentage = (transparentPixels / totalPixels) * 100;
+            
+            // אם גורד יותר מ-45% - חושפים הכל!
+            if (percentage > 45) {
+                revealAll();
+            }
+        }
+
+        // פונקציה שחושפת את הכרטיס במלואו ומציגה את הקוד
+        function revealAll() {
+            isRevealed = true;
+            // ניקוי הקנבס
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // הפעלת צליל (וידוא שההפעלה תעבוד גם בטלפונים)
+            winSound.currentTime = 0;
+            winSound.play().catch(err => console.log("הפעלת השמע נחסמה על ידי הדפדפן", err));
+            
+            // הצגת שכבת הניצחון
+            successOverlay.classList.remove('hidden');
+        }
+
+        // אירועי עכבר
+        canvas.addEventListener('mousedown', (e) => {
+            if (isRevealed) return;
+            isDrawing = true;
+            const pos = getMousePos(e);
+            ctx.beginPath();
+            ctx.moveTo(pos.x, pos.y);
+        });
+        canvas.addEventListener('mousemove', scratch);
+        window.addEventListener('mouseup', () => {
+            isDrawing = false;
+            checkReveal(); // בודק מצב כשהמשתמש מפסיק לגרד
+        });
+
+        // אירועי מגע (לטלפונים וטאבלטים)
+        canvas.addEventListener('touchstart', (e) => {
+            if (isRevealed) return;
+            isDrawing = true;
+            const pos = getMousePos(e);
+            ctx.beginPath();
+            ctx.moveTo(pos.x, pos.y);
+        }, { passive: false });
+        canvas.addEventListener('touchmove', scratch, { passive: false });
+        window.addEventListener('touchend', () => {
+            isDrawing = false;
+            checkReveal(); // בודק מצב כשהמשתמש מרים את האצבע
+        });
+
+        // כפתור התחל מחדש
+        resetBtn.addEventListener('click', initCanvas);
+
+        // אתחול ראשוני
+        initCanvas();
+    </script>
+</body>
+</html>
